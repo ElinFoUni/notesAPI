@@ -1,0 +1,107 @@
+service: notes-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: eu-north-1
+  stage: dev
+  environment:
+    NOTES_TABLE: ${self:service}-notes-${sls:stage}
+    USERS_TABLE: ${self:service}-users-${sls:stage}
+    JWT_SECRET: ${env:JWT_SECRET}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:service}-notes-${sls:stage}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:service}-users-${sls:stage}
+
+functions:
+  signup:
+    handler: src/handler.signup
+    events:
+      - httpApi:
+          path: /api/user/signup
+          method: post
+
+  login:
+    handler: src/handler.login
+    events:
+      - httpApi:
+          path: /api/user/login
+          method: post
+
+  getNotes:
+    handler: src/handler.getNotes
+    events:
+      - httpApi:
+          path: /api/notes
+          method: get
+
+  createNote:
+    handler: src/handler.createNote
+    events:
+      - httpApi:
+          path: /api/notes
+          method: post
+
+  updateNote:
+    handler: src/handler.updateNote
+    events:
+      - httpApi:
+          path: /api/notes
+          method: put
+
+  deleteNote:
+    handler: src/handler.deleteNote
+    events:
+      - httpApi:
+          path: /api/notes
+          method: delete
+
+  # Restore deleted note
+  restoreNote:
+    handler: src/handler.restoreNote
+    events:
+      - httpApi:
+          path: /api/notes/restore
+          method: post
+
+resources:
+  Resources:
+    NotesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-notes-${sls:stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-users-${sls:stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
