@@ -393,7 +393,6 @@ export const login = middy(loginHandler)
     .use(httpErrorHandler());
 
 export const getNotes = middy(getNotesHandler)
-    .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
