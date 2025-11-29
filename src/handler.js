@@ -1,18 +1,19 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const {
     DynamoDBDocumentClient,
     PutCommand,
     GetCommand,
     QueryCommand,
     UpdateCommand
-} from "@aws-sdk/lib-dynamodb";
-import middy from "@middy/core";
-import httpJsonBodyParser from "@middy/http-json-body-parser";
-import httpErrorHandler from "@middy/http-error-handler";
-import createError from "http-errors";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from "uuid";
+} = require("@aws-sdk/lib-dynamodb");
+
+const middy = require("@middy/core");
+const httpJsonBodyParser = require("@middy/http-json-body-parser");
+const httpErrorHandler = require("@middy/http-error-handler");
+const createError = require("http-errors");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require("uuid");
 
 const client = new DynamoDBClient({});
 const db = DynamoDBDocumentClient.from(client);
@@ -20,7 +21,6 @@ const db = DynamoDBDocumentClient.from(client);
 const NOTES_TABLE = process.env.NOTES_TABLE;
 const USERS_TABLE = process.env.USERS_TABLE;
 const JWT_SECRET = process.env.JWT_SECRET;
-
 
 function jsonResponse(statusCode, data) {
     return {
@@ -33,6 +33,7 @@ function jsonResponse(statusCode, data) {
 }
 
 // error messages
+
 function validateSignup(body) {
     if (!body || typeof body !== "object") {
         throw new createError.BadRequest("Body must be JSON");
@@ -145,7 +146,8 @@ function validateNoteIdOnly(body) {
     return { id };
 }
 
-// Middy
+// middy auth
+
 const authMiddleware = () => ({
     before: async (request) => {
         const headers = request.event.headers || {};
@@ -159,7 +161,6 @@ const authMiddleware = () => ({
 
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
-            // Attach user info to the event so handlers can use it
             request.event.user = decoded;
         } catch (err) {
             console.error("JWT error", err);
@@ -168,12 +169,10 @@ const authMiddleware = () => ({
     }
 });
 
-
 // POST /api/user/signup
 async function signupHandler(event) {
     const { email, password } = validateSignup(event.body);
 
-    // Check if user exists
     const existing = await db.send(
         new GetCommand({
             TableName: USERS_TABLE,
@@ -247,11 +246,7 @@ async function getNotesHandler(event) {
         })
     );
 
-    // Filter out deleted notes by default
-    const notes =
-        (result.Items || []).filter(
-            (n) => !n.deleted
-        ) || [];
+    const notes = (result.Items || []).filter((n) => !n.deleted) || [];
 
     return jsonResponse(200, { notes });
 }
@@ -288,7 +283,6 @@ async function updateNoteHandler(event) {
     const userId = event.user.userId;
     const { id, title, text } = validateNoteUpdate(event.body);
 
-    // First check that note exists and belongs to user
     const existing = await db.send(
         new GetCommand({
             TableName: NOTES_TABLE,
@@ -391,35 +385,35 @@ async function restoreNoteHandler(event) {
 
 // Middy wire handlers
 
-export const signup = middy(signupHandler)
+module.exports.signup = middy(signupHandler)
     .use(httpJsonBodyParser())
     .use(httpErrorHandler());
 
-export const login = middy(loginHandler)
+module.exports.login = middy(loginHandler)
     .use(httpJsonBodyParser())
     .use(httpErrorHandler());
 
-export const getNotes = middy(getNotesHandler)
-    .use(httpJsonBodyParser())
-    .use(authMiddleware())
-    .use(httpErrorHandler());
-
-export const createNote = middy(createNoteHandler)
+module.exports.getNotes = middy(getNotesHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-export const updateNote = middy(updateNoteHandler)
+module.exports.createNote = middy(createNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-export const deleteNote = middy(deleteNoteHandler)
+module.exports.updateNote = middy(updateNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-export const restoreNote = middy(restoreNoteHandler)
+module.exports.deleteNote = middy(deleteNoteHandler)
+    .use(httpJsonBodyParser())
+    .use(authMiddleware())
+    .use(httpErrorHandler());
+
+module.exports.restoreNote = middy(restoreNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
