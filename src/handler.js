@@ -1,19 +1,18 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const {
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
     DynamoDBDocumentClient,
     PutCommand,
     GetCommand,
     QueryCommand,
-    UpdateCommand
-} = require("@aws-sdk/lib-dynamodb");
+} from "@aws-sdk/lib-dynamodb";
 
-const middy = require("@middy/core");
-const httpJsonBodyParser = require("@middy/http-json-body-parser");
-const httpErrorHandler = require("@middy/http-error-handler");
-const createError = require("http-errors");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const { v4: uuidv4 } = require("uuid");
+import middy from "@middy/core";
+import httpJsonBodyParser from "@middy/http-json-body-parser";
+import httpErrorHandler from "@middy/http-error-handler";
+import createError from "http-errors";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
 
 const client = new DynamoDBClient({});
 const db = DynamoDBDocumentClient.from(client);
@@ -26,9 +25,9 @@ function jsonResponse(statusCode, data) {
     return {
         statusCode,
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
     };
 }
 
@@ -97,7 +96,7 @@ function validateNoteCreate(body) {
 
     return {
         title: title.trim(),
-        text: text.trim()
+        text: text.trim(),
     };
 }
 
@@ -129,7 +128,7 @@ function validateNoteUpdate(body) {
     return {
         id,
         title: title.trim(),
-        text: text.trim()
+        text: text.trim(),
     };
 }
 
@@ -166,7 +165,7 @@ const authMiddleware = () => ({
             console.error("JWT error", err);
             throw new createError.Unauthorized("Invalid or expired token");
         }
-    }
+    },
 });
 
 // POST /api/user/signup
@@ -176,7 +175,7 @@ async function signupHandler(event) {
     const existing = await db.send(
         new GetCommand({
             TableName: USERS_TABLE,
-            Key: { email }
+            Key: { email },
         })
     );
 
@@ -195,8 +194,8 @@ async function signupHandler(event) {
                 email,
                 userId,
                 passwordHash,
-                createdAt: now
-            }
+                createdAt: now,
+            },
         })
     );
 
@@ -210,7 +209,7 @@ async function loginHandler(event) {
     const result = await db.send(
         new GetCommand({
             TableName: USERS_TABLE,
-            Key: { email }
+            Key: { email },
         })
     );
 
@@ -241,8 +240,8 @@ async function getNotesHandler(event) {
             TableName: NOTES_TABLE,
             KeyConditionExpression: "userId = :userId",
             ExpressionAttributeValues: {
-                ":userId": userId
-            }
+                ":userId": userId,
+            },
         })
     );
 
@@ -265,13 +264,13 @@ async function createNoteHandler(event) {
         title,
         text,
         createdAt: now,
-        modifiedAt: now
+        modifiedAt: now,
     };
 
     await db.send(
         new PutCommand({
             TableName: NOTES_TABLE,
-            Item: note
+            Item: note,
         })
     );
 
@@ -286,7 +285,7 @@ async function updateNoteHandler(event) {
     const existing = await db.send(
         new GetCommand({
             TableName: NOTES_TABLE,
-            Key: { userId, id }
+            Key: { userId, id },
         })
     );
 
@@ -300,13 +299,13 @@ async function updateNoteHandler(event) {
         ...existing.Item,
         title,
         text,
-        modifiedAt: now
+        modifiedAt: now,
     };
 
     await db.send(
         new PutCommand({
             TableName: NOTES_TABLE,
-            Item: updated
+            Item: updated,
         })
     );
 
@@ -321,7 +320,7 @@ async function deleteNoteHandler(event) {
     const existing = await db.send(
         new GetCommand({
             TableName: NOTES_TABLE,
-            Key: { userId, id }
+            Key: { userId, id },
         })
     );
 
@@ -335,13 +334,13 @@ async function deleteNoteHandler(event) {
         ...existing.Item,
         deleted: true,
         deletedAt: now,
-        modifiedAt: now
+        modifiedAt: now,
     };
 
     await db.send(
         new PutCommand({
             TableName: NOTES_TABLE,
-            Item: deletedNote
+            Item: deletedNote,
         })
     );
 
@@ -356,7 +355,7 @@ async function restoreNoteHandler(event) {
     const existing = await db.send(
         new GetCommand({
             TableName: NOTES_TABLE,
-            Key: { userId, id }
+            Key: { userId, id },
         })
     );
 
@@ -370,13 +369,13 @@ async function restoreNoteHandler(event) {
         ...existing.Item,
         deleted: false,
         deletedAt: null,
-        modifiedAt: now
+        modifiedAt: now,
     };
 
     await db.send(
         new PutCommand({
             TableName: NOTES_TABLE,
-            Item: restoredNote
+            Item: restoredNote,
         })
     );
 
@@ -385,35 +384,35 @@ async function restoreNoteHandler(event) {
 
 // Middy wire handlers
 
-module.exports.signup = middy(signupHandler)
+export const signup = middy(signupHandler)
     .use(httpJsonBodyParser())
     .use(httpErrorHandler());
 
-module.exports.login = middy(loginHandler)
+export const login = middy(loginHandler)
     .use(httpJsonBodyParser())
     .use(httpErrorHandler());
 
-module.exports.getNotes = middy(getNotesHandler)
-    .use(httpJsonBodyParser())
-    .use(authMiddleware())
-    .use(httpErrorHandler());
-
-module.exports.createNote = middy(createNoteHandler)
+export const getNotes = middy(getNotesHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-module.exports.updateNote = middy(updateNoteHandler)
+export const createNote = middy(createNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-module.exports.deleteNote = middy(deleteNoteHandler)
+export const updateNote = middy(updateNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
 
-module.exports.restoreNote = middy(restoreNoteHandler)
+export const deleteNote = middy(deleteNoteHandler)
+    .use(httpJsonBodyParser())
+    .use(authMiddleware())
+    .use(httpErrorHandler());
+
+export const restoreNote = middy(restoreNoteHandler)
     .use(httpJsonBodyParser())
     .use(authMiddleware())
     .use(httpErrorHandler());
