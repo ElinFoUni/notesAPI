@@ -1,0 +1,33 @@
+{
+  "name": "aws---notes-api",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "src/handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "serverless deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ElinFoUni/notesAPI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ElinFoUni/notesAPI/issues"
+  },
+  "homepage": "https://github.com/ElinFoUni/notesAPI#readme",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.940.0",
+    "@aws-sdk/lib-dynamodb": "^3.940.0",
+    "@middy/core": "^6.4.5",
+    "@middy/http-error-handler": "^6.4.5",
+    "@middy/http-json-body-parser": "^6.4.5",
+    "bcryptjs": "^3.0.3",
+    "http-errors": "^2.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^13.0.0"
+  }
+}
